@@ -2,7 +2,7 @@ body {
     font-family: 'Helvetica Neue', Verdana, Helvetica, Arial, sans-serif;
     max-width: 800px;
     margin: 0 auto;
-    padding-top: 72px;
+    padding: 72px 0;
     -webkit-font-smoothing: antialiased;
     font-size: 1.125em;
     color: #333;
@@ -18,7 +18,7 @@ h1 {
 }
 
 h2 {
-    font-size: 2em
+    font-size: 1.85em
 }
 
 h3 {
@@ -49,12 +49,16 @@ pre {
     font-size: 16px;
     padding: 16px 18px;
     border-radius: 5px;
-    background-color:  rgb(240, 242, 248);
+    background-color:  rgb(240, 242, 245);
 }
 
 *:not(pre) > code {
     font-size: 1.15em;
     padding: 3px 5px;
     border-radius: 5px;
-    background-color:  rgb(240, 242, 248);
+    background-color:  rgb(240, 242, 245);
+}
+
+.hidden {
+    display: none;
 }
