@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
-  <head>
+
+<head>
+    <title>domino-clj</title>
     <meta charset="utf-8">
     <!-- KLIPSE ASSETS -->
-    <link rel="stylesheet" type="text/css" href="https://storage.googleapis.com/app.klipse.tech/css/codemirror.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.5/css/bulma.min.css"
-      integrity="sha256-vK3UTo/8wHbaUn+dTQD0X6dzidqc5l7gczvH+Bnowwk=" crossorigin="anonymous" />
+    <link rel="stylesheet" type="text/css" href="codemirror.css">
     <script>
         window.klipse_settings = {
-            selector: '.lang-eval-clojure', // css selector for the html elements you want to klipsify
+            selector: '.language-eval-clojure', // css selector for the html elements you want to klipsify
         };
     </script>
     <!-- END KLIPSE ASSETS -->
@@ -16,12 +16,11 @@
     <link rel="stylesheet" type="text/css" href="style.css">
     <link rel="stylesheet" type="text/css" href="highlight.pack.css">
 
-  </head>
-  <body>
-<h2>Example of using Domino with Reagent</h2>
+</head>
 
-    <pre><code class="lang-eval-clojure" data-external-libs="https://raw.githubusercontent.com/domino-clj/domino/master/src">
-
+<body>
+    <h1>Example of using Domino with Reagent</h1>
+<pre><code class="language-eval-clojure" data-external-libs="https://raw.githubusercontent.com/domino-clj/domino/master/src">
 (require '[domino.core :as core])
 (require '[reagent.core :as reagent])
 (require '[cljs.pprint :refer [pprint]])
@@ -102,10 +101,18 @@
    [:pre (with-out-str (pprint (:domino.core/db @ctx)))]])
 
 (reagent/render-component [home-page] js/klipse-container)
-    </code></pre>
+</code></pre>
+
 
     <script src="highlight.pack.js"></script>
-    <script>hljs.initHighlightingOnLoad();</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+                document.querySelectorAll('pre code.language-clojure').forEach((block) => {
+                    hljs.highlightBlock(block);
+                });
+            });
+    </script>
     <script src="https://storage.googleapis.com/app.klipse.tech/plugin/js/klipse_plugin.js"></script>
-  </body>
+</body>
+
 </html>
