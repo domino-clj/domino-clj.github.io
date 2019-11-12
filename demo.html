@@ -60,12 +60,15 @@
      :on-change #&#40;rf/dispatch &#91;:event id &#40;-&gt; % .-target .-value&#41;&#93;&#41;}&#93;&#93;&#41;
 
 &#40;defn numeric-input &#91;label id&#93;
-  &#91;:div
-   &#91;:label label&#93;
-   &#91;:input 
-    {:type      :text
-     :value @&#40;rf/subscribe &#91;:id id&#93;&#41;
-     :on-change #&#40;rf/dispatch &#91;:event id &#40;-&gt; % .-target .-value parse-float&#41;&#93;&#41;}&#93;&#93;&#41;
+  &#40;reagent/with-let &#91;value &#40;reagent/atom nil&#41;&#93;
+   &#91;:div
+     &#91;:label label&#93;
+     &#91;:input 
+      {:type  :text
+       :value @value
+       :on-focus #&#40;reset! value @&#40;rf/subscribe &#91;:id id&#93;&#41;&#41;
+       :on-blur #&#40;rf/dispatch &#91;:event id &#40;parse-float @value&#41;&#93;&#41;
+       :on-change #&#40;reset! value &#40;-&gt; % .-target .-value&#41;&#41;}&#93;&#93;&#41;&#41;
 
 &#40;rf/dispatch-sync
    &#91;:init
