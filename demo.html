@@ -8,7 +8,7 @@
     <link rel="stylesheet" type="text/css" href="codemirror.css">
     <script>
         window.klipse_settings = {
-            selector: '.language-eval-clojure', // css selector for the html elements you want to klipsify
+            selector: '.lang-eval-clojure', // css selector for the html elements you want to klipsify
         };
     </script>
     <!-- END KLIPSE ASSETS -->
@@ -19,95 +19,108 @@
 </head>
 
 <body>
-    <h1>Example of using Domino with Reagent</h1>
-<pre><code class="language-eval-clojure" data-external-libs="https://raw.githubusercontent.com/domino-clj/domino/master/src">
-(require '[domino.core :as core])
-(require '[reagent.core :as reagent])
-(require '[cljs.pprint :refer [pprint]])
+    <h1>Example of Domino with re-frame</h1><p><pre><code class="language-clojure lang-eval-clojure" data-external-libs="https://raw.githubusercontent.com/domino-clj/domino/master/src,https://raw.githubusercontent.com/day8/re-frame/tree/master/src"> (require '[domino.core :as domino]) </code></pre></p><pre><code class="clojure lang-eval-clojure">&#40;require '&#91;reagent.core :as reagent&#93;&#41;
+&#40;require '&#91;re-frame.core :as rf&#93;&#41;
+&#40;require '&#91;goog.string :as string&#93;&#41;
+&#40;require '&#91;goog.string.format&#93;&#41;
+&#40;require '&#91;cljs.pprint :refer &#91;pprint&#93;&#93;&#41;
+</code></pre><pre><code class="clojure lang-eval-clojure">&#40;rf/reg-event-db
+ :init
+ &#40;fn &#91;&#95; &#91;&#95; schema&#93;&#93;
+   &#40;domino/initialize schema&#41;&#41;&#41;
 
-(def ctx
-  (reagent/atom
-    (let [model {:model
-                 [[:user {}
-                   [:first-name {:id :fname}]
-                   [:last-name {:id :lname}]
-                   [:full-name {:id :full-name}]
-                   [:weight {:id :weight}
-                    [:lb {:id :lb}]
-                    [:kg {:id :kg}]]]
-                  [:physician {}
-                   [:first-name {:id :physician-fname}]]]
-                 :effects
-                 [{:inputs  [:full-name]
-                   :handler (fn [_ [full-name]]
-                              (when (= "Bobberton, Bob" full-name)
-                                (js/alert "launching missiles!")))}]
-                 :events
-                 [{:inputs  [:fname :lname]
-                   :outputs [:full-name]
-                   :handler (fn [_ [fname lname] _]
-                              [(or (when (and fname lname) (str lname ", " fname)) fname lname)])}
-                  {:inputs  [:kg]
-                   :outputs [:lb]
-                   :handler (fn [_ [kg] _]
-                              [(* kg 2.20462)])}
-                  {:inputs  [:lb]
-                   :outputs [:kg]
-                   :handler (fn [_ [lb] _]
-                              [(/ lb 2.20462)])}]}]
-      (core/initialize! model {}))))
+&#40;rf/reg-event-db
+ :event
+ &#40;fn &#91;db &#91;&#95; id value&#93;&#93;
+   &#40;domino/transact db &#91;&#91;&#40;get-in &#40;::domino/model db&#41; &#91;:id-&gt;path id&#93;&#41; value&#93;&#93;&#41;&#41;&#41;
 
-(defn transact [path value]
-  (swap! ctx core/transact [[path value]]))
+&#40;rf/reg-sub
+ :id
+ &#40;fn &#91;db &#91;&#95; id&#93;&#93;
+   &#40;get-in &#40;::domino/db db&#41; &#40;get-in &#40;::domino/model db&#41; &#91;:id-&gt;path id&#93;&#41;&#41;&#41;&#41;
 
-(defn db-value [path]
-  (get-in @ctx (into [::core/db] path)))
+&#40;rf/reg-sub
+ :db
+ &#40;fn &#91;db &#95;&#93;
+   &#40;::domino/db db&#41;&#41;&#41;
 
-(defn target-value [e]
-  (.. e -target -value))
+&#40;defn parse-float &#91;s&#93;
+  &#40;let &#91;value &#40;js/parseFloat s&#41;&#93;
+    &#40;when-not &#40;js/isNaN value&#41; value&#41;&#41;&#41;
 
-(defn state-atom [path]
-  (let [state (reagent/atom nil)]
-    (add-watch ctx path
-               (fn [path _ old-state new-state]
-                 (let [ctx-path (into [::core/db] path)
-                       old-value (get-in old-state ctx-path)
-                       new-value (get-in new-state ctx-path)]
-                   (when (not= old-value new-value)
-                     (reset! state new-value)))))
-    state))
+&#40;defn format-number &#91;n&#93;
+  &#40;when n &#40;string/format &quot;%.2f&quot; n&#41;&#41;&#41;
 
+&#40;defn text-input &#91;label id&#93;
+  &#91;:div
+   &#91;:label label&#93;
+   &#91;:input
+    {:type      :text
+     :value @&#40;rf/subscribe &#91;:id id&#93;&#41;
+     :on-change #&#40;rf/dispatch &#91;:event id &#40;-&gt; % .-target .-value&#41;&#93;&#41;}&#93;&#93;&#41;
 
- (defn input [label path & [fmt]]
-   (let [local-state (state-atom path)
-         save-value  #(reset! local-state (if fmt (fmt (target-value %)) (target-value %)))]
-     (fn []
-       [:div.field.is-horizontal
-        [:label.field-label.is-normal label " "]
-        [:div.field-body>input.input
-         {:value     @local-state
-          :on-change save-value
-          :on-blur   #(transact path @local-state)}]])))
+&#40;defn numeric-input &#91;label id&#93;
+  &#40;reagent/with-let &#91;value &#40;reagent/atom nil&#41;&#93;
+   &#91;:div
+     &#91;:label label&#93;
+     &#91;:input 
+      {:type  :text
+       :value @value
+       :on-focus #&#40;reset! value @&#40;rf/subscribe &#91;:id id&#93;&#41;&#41;
+       :on-blur #&#40;rf/dispatch &#91;:event id &#40;parse-float @value&#41;&#93;&#41;
+       :on-change #&#40;reset! value &#40;-&gt; % .-target .-value&#41;&#41;}&#93;&#93;&#41;&#41;
 
-(defn home-page []
-  [:div
-   [input "First name" [:user :first-name]]
-   [input "Last name" [:user :last-name]]
-   [input "Weight (kg)" [:user :weight :kg] (fnil js/parseFloat 0)]
-   [input "Weight (lb)" [:user :weight :lb] (fnil js/parseFloat 0)]
-   [:label "Full name " (db-value [:user :full-name])]
-   [:hr]
-   [:h4 "DB state"]
-   [:pre (with-out-str (pprint (:domino.core/db @ctx)))]])
+&#40;rf/dispatch-sync
+   &#91;:init
+    {:model
+     &#91;&#91;:demographics
+       &#91;:first-name {:id :first-name}&#93;
+       &#91;:last-name {:id :last-name}&#93;
+       &#91;:full-name {:id :full-name}&#93;&#93;
+      &#91;:vitals
+       &#91;:height {:id :height}&#93;
+       &#91;:weight {:id :weight}&#93;
+       &#91;:bmi {:id :bmi}&#93;&#93;&#93;
+     :effects
+     &#91;{:inputs  &#91;:full-name&#93;
+       :handler &#40;fn &#91;&#95; {:keys &#91;full-name&#93;}&#93;
+                  &#40;when &#40;= &quot;Bobberton, Bob&quot; full-name&#41;
+                    &#40;js/alert &quot;Hi Bob!&quot;&#41;&#41;&#41;}&#93;
+     :events
+     &#91;{:inputs  &#91;:first-name :last-name&#93;
+       :outputs &#91;:full-name&#93;
+       :handler &#40;fn &#91;&#95; {:keys &#91;first-name last-name&#93;} &#95;&#93;
+                  {:full-name &#40;or &#40;when &#40;and first-name last-name&#41;
+                                    &#40;str last-name &quot;, &quot; first-name&#41;&#41;
+                                  first-name
+                                  last-name&#41;}&#41;}
+      {:inputs  &#91;:height :weight&#93;
+       :outputs &#91;:bmi&#93;
+       :handler &#40;fn &#91;&#95; {:keys &#91;height weight&#93;} {:keys &#91;bmi&#93;}&#93;
+                  {:bmi &#40;if &#40;and height weight&#41;
+                          &#40;/ weight &#40;&#42; height height&#41;&#41;
+                          bmi&#41;}&#41;}&#93;}&#93;&#41;
 
-(reagent/render-component [home-page] js/klipse-container)
+&#40;defn home-page &#91;&#93;
+  &#91;:div
+   &#91;:h3 &quot;Patient demographics&quot;&#93;
+   &#91;text-input &quot;First name&quot; :first-name&#93;
+   &#91;text-input &quot;Last name&quot; :last-name&#93;
+   &#91;numeric-input &quot;Height &#40;M&#41;&quot; :height &#40;fnil js/parseFloat 0&#41;&#93;
+   &#91;numeric-input &quot;Weight &#40;KG&#41;&quot; :weight &#40;fnil js/parseFloat 0&#41;&#93;
+   &#91;:p&gt;label &quot;Full name &quot; @&#40;rf/subscribe &#91;:id :full-name&#93;&#41;&#93;
+   &#91;:p&gt;label &quot;BMI &quot; &#40;format-number @&#40;rf/subscribe &#91;:id :bmi&#93;&#41;&#41;&#93;
+   &#91;:hr&#93;
+   &#91;:h4 &quot;DB state&quot;&#93;
+   &#91;:pre &#40;with-out-str &#40;pprint @&#40;rf/subscribe &#91;:db&#93;&#41;&#41;&#41;&#93;&#93;&#41;
+
+&#40;reagent/render-component &#91;home-page&#93; js/klipse-container&#41;
 </code></pre>
-
 
     <script src="highlight.pack.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', (event) => {
-                document.querySelectorAll('pre code.language-clojure').forEach((block) => {
+                document.querySelectorAll('pre code.clojure').forEach((block) => {
                     hljs.highlightBlock(block);
                 });
             });
