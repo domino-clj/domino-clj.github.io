@@ -49,8 +49,29 @@
 <p>Async event handler takes an additional argument that specifies the callback function
 that should be called with the result.</p>
 <p><strong>3. Effects</strong></p>
-<p>Effects are executed after events have been transacted and the new context is produced. Effects are defined as a map of <code>:inputs</code> and a <code>:handler</code> function. </p>
-<p>The handler accepts two arguments: a context containing the current state of the engine, and a list of input values. The effects do not cascade. For example:</p>
+<p>Effects are used for effectful operations, such as IO, that happen at the edges of
+the computation. The effects do not cascade. An effect can contain the following keys: </p>
+<ul>
+<li><code>:id</code> - optional unique identifier for the event</li>
+<li><code>:inputs</code> - optional set of inputs that trigger the event to run when changed</li>
+<li><code>:outputs</code> - optional set of outpus that the event will produce when running the handler</li>
+<li><code>:handler</code> - a function that handles the business logic for the effect</li>
+</ul>
+<h4>incoming effects</h4>
+<p>Effects that declare <code>:outputs</code> are used to generate the initial input to the
+engine. For example, an effect that injects a timestamp can look as follows:</p>
+<pre><code class="language-clojure">{:id      :timestamp
+ :outputs [:ts]
+ :handler (fn [_ {:keys [ts]}]
+            {:ts (.getTime (java.util.Date.))})}</code></pre>
+<p>The effect has an <code>:id</code> key specifying the unique identifier that is used be trigger the event
+by calling the <code>domino.core/trigger-effects</code> function. This function accepts a collection of
+event ids, e.g: <code>(trigger-effects ctx [:timestamp])</code>.</p>
+<p>The handler accepts two arguments: a context containing the current state of the engine, and a list of output values.</p>
+<h4>outgoing effects</h4>
+<p>Effects that declare <code>:inputs</code> will be run after events have been transacted and the new context is produced. These effects are defined as a map of <code>:inputs</code> and a <code>:handler</code> function. </p>
+<p>The handler accepts two arguments: a context containing the current state of the engine, and a list of input values.</p>
+<p> For example:</p>
 <pre><code class="language-clojure">{:inputs [:total]
  :handler (fn [ctx {:keys [total]}]
             (when (&gt; total 1337)
