@@ -30,6 +30,11 @@
    &#40;domino/initialize schema&#41;&#41;&#41;
 
 &#40;rf/reg-event-db
+  :trigger-effects
+  &#40;fn &#91;db &#91;&#95; effect-ids&#93;&#93;
+    &#40;domino/trigger-effects db effect-ids&#41;&#41;&#41;
+
+&#40;rf/reg-event-db
  :event
  &#40;fn &#91;db &#91;&#95; id value&#93;&#93;
    &#40;domino/transact db &#91;&#91;&#40;get-in &#40;::domino/model db&#41; &#91;:id-&gt;path id&#93;&#41; value&#93;&#93;&#41;&#41;&#41;
@@ -80,9 +85,14 @@
       &#91;:vitals
        &#91;:height {:id :height}&#93;
        &#91;:weight {:id :weight}&#93;
-       &#91;:bmi {:id :bmi}&#93;&#93;&#93;
+       &#91;:bmi {:id :bmi}&#93;&#93;
+      &#91;:counter {:id :counter}&#93;&#93;
      :effects
-     &#91;{:inputs  &#91;:full-name&#93;
+     &#91;{:id :increment
+       :outputs &#91;:counter&#93;
+       :handler &#40;fn &#91;&#95; state&#93;
+                  &#40;update state :counter &#40;fnil inc 0&#41;&#41;&#41;}
+      {:inputs  &#91;:full-name&#93;
        :handler &#40;fn &#91;&#95; {:keys &#91;full-name&#93;}&#93;
                   &#40;when &#40;= &quot;Bobberton, Bob&quot; full-name&#41;
                     &#40;js/alert &quot;Hi Bob!&quot;&#41;&#41;&#41;}&#93;
@@ -108,8 +118,12 @@
    &#91;text-input &quot;Last name&quot; :last-name&#93;
    &#91;numeric-input &quot;Height &#40;M&#41;&quot; :height &#40;fnil js/parseFloat 0&#41;&#93;
    &#91;numeric-input &quot;Weight &#40;KG&#41;&quot; :weight &#40;fnil js/parseFloat 0&#41;&#93;
+   &#91;:button
+    {:on-click #&#40;rf/dispatch &#91;:trigger-effects &#91;:increment&#93;&#93;&#41;}
+    &quot;increment count&quot;&#93;
    &#91;:p&gt;label &quot;Full name &quot; @&#40;rf/subscribe &#91;:id :full-name&#93;&#41;&#93;
    &#91;:p&gt;label &quot;BMI &quot; &#40;format-number @&#40;rf/subscribe &#91;:id :bmi&#93;&#41;&#41;&#93;
+   &#91;:p&gt;label &quot;Counter &quot; @&#40;rf/subscribe &#91;:id :counter&#93;&#41;&#93;
    &#91;:hr&#93;
    &#91;:h4 &quot;DB state&quot;&#93;
    &#91;:pre &#40;with-out-str &#40;pprint @&#40;rf/subscribe &#91;:db&#93;&#41;&#41;&#41;&#93;&#93;&#41;
