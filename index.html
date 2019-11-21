@@ -70,7 +70,15 @@
                        &#40;handler ctx inputs outputs&#41;&#41;
                      ;; returning nil prevents handler execution
                      &#41;&#41;&#93;}&#93;&#93;}
-</code></pre><h3>Triggering Events</h3><p>Occasionally, there may be a use case where you would want to trigger an event directly without transacting updated state. Events, optionally, can have an id key associated with them. This is how you would be able to reference the event from trigger-events. </p><p>For example, this might happen when a button is clicked and you want a value to increment. This can be accomplished with a call to <code>trigger-events</code>.</p><p><code>trigger-events</code> takes a list of events that you would like trigger and calls <code>transact</code> with the current state of the data from all the inputs of the events. For example:</p><pre><code class="clojure">&#40;domino.core/trigger-events ctx &#91;:increment-total&#93;&#41;
+</code></pre><h3>Triggering Effects</h3><p>Effects can act as inputs to the data flow engine. For example, this might happen when a button is clicked and you want a value to increment. This can be accomplished with a call to <code>trigger-effects</code>.</p><p><code>trigger-effects</code> takes a list of effects that you would like trigger and calls <code>transact</code> with the current state of the data from all the inputs of the effects. For example:</p><pre><code class="clojure">&#40;def ctx
+     &#40;domino.core/initialize
+       {:model   &#91;&#91;:total {:id :total}&#93;&#93;
+        :effects &#91;{:id      :increment-total
+                   :outputs &#91;:total&#93;
+                   :handler &#40;fn &#91;&#95; current-state&#93;
+                              &#40;update current-state :total inc&#41;&#41;}&#93;}&#41;&#41;
+
+&#40;:domino.core/db &#40;domino.core/trigger-effects ctx &#91;:increment-total&#93;&#41;&#41; ;; =&gt; {:total 1}
 </code></pre><p>This wraps up everything you need to know to start using Domino. You can see a more detailed example using Domino with Reagent <a href='https://domino-clj.github.io/demo'>here</a>.</p><h2>Possible Use Cases</h2><ul><li>UI state management</li><li>FSM</li><li>Reactive systems / spreadsheet-like models</li></ul><h2>Example App</h2><p>There is a demo front-end test page under <code>env/dev/cljs/domino/test&#95;page.cljs</code></p><h2>Inspirations</h2><ul><li><a href='https://github.com/Day8/re-frame'>re-frame</a></li><li><a href='https://github.com/hoplon/javelin'>javelin</a></li><li><a href='https://github.com/metosin/reitit'>reitit</a></li></ul><h2>License</h2><p>Copyright © 2019 </p><p>Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.</p>
 
     <script src="highlight.pack.js"></script>
