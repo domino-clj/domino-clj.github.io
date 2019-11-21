@@ -24,30 +24,35 @@
 &#40;require '&#91;goog.string :as string&#93;&#41;
 &#40;require '&#91;goog.string.format&#93;&#41;
 &#40;require '&#91;cljs.pprint :refer &#91;pprint&#93;&#93;&#41;
-</code></pre><pre><code class="clojure lang-eval-clojure">&#40;rf/reg-event-db
+</code></pre><pre><code class="clojure lang-eval-clojure">;;initialize the Domino context using the supplied schema
+&#40;rf/reg-event-db
  :init
  &#40;fn &#91;&#95; &#91;&#95; schema&#93;&#93;
    &#40;domino/initialize schema&#41;&#41;&#41;
 
+;;trigger effects with the provided ids
 &#40;rf/reg-event-db
   :trigger-effects
-  &#40;fn &#91;db &#91;&#95; effect-ids&#93;&#93;
-    &#40;domino/trigger-effects db effect-ids&#41;&#41;&#41;
+  &#40;fn &#91;ctx &#91;&#95; effect-ids&#93;&#93;
+    &#40;domino/trigger-effects ctx effect-ids&#41;&#41;&#41;
 
+;;dispatch an input event
 &#40;rf/reg-event-db
  :event
- &#40;fn &#91;db &#91;&#95; id value&#93;&#93;
-   &#40;domino/transact db &#91;&#91;&#40;get-in &#40;::domino/model db&#41; &#91;:id-&gt;path id&#93;&#41; value&#93;&#93;&#41;&#41;&#41;
+ &#40;fn &#91;ctx &#91;&#95; id value&#93;&#93;
+   &#40;domino/transact ctx &#91;&#91;&#40;get-in &#40;::domino/model ctx&#41; &#91;:id-&gt;path id&#93;&#41; value&#93;&#93;&#41;&#41;&#41;
 
+;;subscribe to the value at the given id
 &#40;rf/reg-sub
  :id
- &#40;fn &#91;db &#91;&#95; id&#93;&#93;
-   &#40;get-in &#40;::domino/db db&#41; &#40;get-in &#40;::domino/model db&#41; &#91;:id-&gt;path id&#93;&#41;&#41;&#41;&#41;
+ &#40;fn &#91;ctx &#91;&#95; id&#93;&#93;
+   &#40;get-in &#40;::domino/db ctx&#41; &#40;get-in &#40;::domino/model ctx&#41; &#91;:id-&gt;path id&#93;&#41;&#41;&#41;&#41;
 
+;;returns Domino db
 &#40;rf/reg-sub
  :db
- &#40;fn &#91;db &#95;&#93;
-   &#40;::domino/db db&#41;&#41;&#41;
+ &#40;fn &#91;ctx &#95;&#93;
+   &#40;::domino/db ctx&#41;&#41;&#41;
 
 &#40;defn parse-float &#91;s&#93;
   &#40;let &#91;value &#40;js/parseFloat s&#41;&#93;
@@ -75,6 +80,7 @@
        :on-blur #&#40;rf/dispatch &#91;:event id &#40;parse-float @value&#41;&#93;&#41;
        :on-change #&#40;reset! value &#40;-&gt; % .-target .-value&#41;&#41;}&#93;&#93;&#41;&#41;
 
+;;initialize Domino
 &#40;rf/dispatch-sync
    &#91;:init
     {:model
@@ -111,6 +117,7 @@
                           &#40;/ weight &#40;&#42; height height&#41;&#41;
                           bmi&#41;}&#41;}&#93;}&#93;&#41;
 
+;;render the UI
 &#40;defn home-page &#91;&#93;
   &#91;:div
    &#91;:h3 &quot;Patient demographics&quot;&#93;
