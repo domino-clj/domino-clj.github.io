@@ -37,7 +37,7 @@
  :handler &#40;fn &#91;ctx {:keys &#91;total&#93;}&#93;
             &#40;when &#40;&gt; total 1337&#41;
               &#40;println &quot;Woah. That's a lot.&quot;&#41;&#41;&#41;}
-</code></pre><h2>Usage</h2><p><strong>1. Require <code>domino.core</code></strong></p><p><pre><code class="language-eval-clojure" data-external-libs="https://raw.githubusercontent.com/domino-clj/domino/master/src">(require '[domino.core :as domino]) </code></pre></p><p><strong>2. Declare your schema</strong></p><p>Let's take a look at a simple engine that accumulates a total. Whenever an amount is set, this value is added to the current value of the total. If the total exceeds <code>1337</code> at any point, it prints out a statement that says <code>&quot;Woah. That's a lot.&quot;</code></p><pre><code class="eval-clojure">&#40;def schema
+</code></pre><h2>Usage</h2><p><strong>1. Require <code>domino.core</code></strong></p><p><pre><code class="language-clojure lang-eval-clojure" data-external-libs="https://raw.githubusercontent.com/domino-clj/domino/master/src"> (require '[domino.core :as domino]) </code></pre></p><p><strong>2. Declare your schema</strong></p><p>Let's take a look at a simple engine that accumulates a total. Whenever an amount is set, this value is added to the current value of the total. If the total exceeds <code>1337</code> at any point, it prints out a statement that says <code>&quot;Woah. That's a lot.&quot;</code></p><pre><code class="clojure lang-eval-clojure">&#40;def schema
   {:model   &#91;&#91;:amount {:id :amount}&#93;
              &#91;:total {:id :total}&#93;&#93;
    :events  &#91;{:id      :update-total 
@@ -49,36 +49,46 @@
               :handler &#40;fn &#91;ctx {:keys &#91;total&#93;}&#93;
                          &#40;when &#40;&gt; total 1337&#41;
                            &#40;js/alert &quot;Woah. That's a lot.&quot;&#41;&#41;&#41;}&#93;}&#41;
-</code></pre><p>This schema declaration is a map containing three keys:</p><ul><li>The <code>:model</code> key declares the shape of the data model used by Domino.</li><li>The <code>:events</code> key contains pure functions that represent events that are triggered when their inputs change. The events produce updated values that are persisted in the state.</li><li>The <code>:effects</code> key contains the functions that produce side effects based on the updated state.</li></ul><p>Using a unified model referenced by the event functions allows us to easily tell how a particular piece of business logic is triggered. </p><p>The event engine generates a direct acyclic graph (DAG) based on the <code>:input</code> keys declared by each event that's used to compute the new state in a transaction. This approach removes any ambiguity regarding when and how business logic is executed.</p><p>Domino explicitly separates the code that modifies the state of the data from the code that causes side effects. This encourages keeping business logic pure and keeping the effects at the edges of the application.</p><p><strong>3. Initialize the engine</strong></p><p>The <code>schema</code> that we declared above provides a specification for the internal data model and the code that operates on it. Once we've created a schema, we will need to initialize the data flow engine. This is done by calling the <code>domino/initialize</code> function. This function can be called by providing a schema along with an optional initial state map. In our example, we will give it the <code>schema</code> that we defined above, and an initial value for the state with the <code>:total</code> set to <code>0</code>.</p><pre><code class="eval-clojure">&#40;def ctx &#40;atom &#40;domino/initialize schema {:total 0}&#41;&#41;&#41;
-</code></pre><p>Calling the <code>initialize</code> function creates a context <code>ctx</code> that's used as the initial state for the engine. The context will contain the model, events, effects, event graph, and db (state). In our example we use an atom in order to easily update the state of the engine.</p><p><strong>4. Transact your external data changes</strong></p><p>We can update the state of the data by calling <code>domino/transact</code> that accepts the current <code>ctx</code> along with an inputs vector, returning the updated <code>ctx</code>. The input vector is a collection of path-value pairs. For example, to set the value of <code>:amount</code> to <code>10</code>, you would pass in the following input vector <code>&#91;&#91;&#91;:amount&#93; 10&#93;&#93;</code>.</p><pre><code class="eval-clojure">&#40;swap! ctx domino/transact &#91;&#91;&#91;:amount&#93; 10&#93;&#93;&#41;
-</code></pre><p>The updated <code>ctx</code> contains the <code>:change-history</code> which is a simple vector of all the changes as they were applied to the data in exectution order of the events that were triggered.</p><pre><code class="eval-clojure">&#40;:change-history @ctx&#41;
-</code></pre><p>We can see the new context contains the updated total amount and the change history shows the order in which the changes were applied.</p><p>The <code>:domino.core/db</code> key in the context will contain the updated state reflecting the changes applied by running the events.</p><pre><code class="eval-clojure">&#40;:domino.core/db @ctx&#41;
-</code></pre><p>Finally, let's update the <code>:amount</code> to a value that triggers an effect.</p><p><pre><code class="language-eval-clojure"<pre><code>       data-preamble=&quot;&#40;require '&#91;reagent.core :as reagent&#93;&#41;&quot;&gt;&#40;defn button &#91;&#93; </code></pre>  [:button<pre><code>{:on-click #&#40;swap! ctx domino/transact &#91;&#91;&#91;:amount&#93; 2000&#93;&#93;&#41;}
-&quot;trigger effect&quot;&#93;&#41; </code></pre>(reagent/render-component [button] js/klipse-container) </code></pre></p><h3>Interceptors</h3><p>Domino provides the ability to add interceptors pre and post event execution. Interceptors are defined in the schema's model. If there are multiple interceptors applicable, they are composed together.</p><p>In the metadata map for a model key, you can add a <code>:pre</code> and <code>:post</code> key to define these interceptors. Below are some examples</p><pre><code class="clojure">{:model  &#91;&#91;:foo {:id  :foo
-           :pre &#91;&#40;fn &#91;handler&#93;
-                   &#40;fn &#91;ctx inputs outputs&#93;
-                     &#40;handler ctx
-                              &#40;assoc inputs :bar 5&#41;
-                              outputs&#41;&#41;&#41;&#93;
-           :post &#91;&#40;fn &#91;handler&#93;
-                    &#40;fn &#91;result&#93;
-                      &#40;handler &#40;update result :bar inc&#41;&#41;&#41;&#41;&#93;}&#93;&#93;}
-</code></pre><p>With interceptors, you can also short circuit an event, wherein you prevent handler execution by returning nil. For example</p><pre><code class="clojure">{:model  &#91;&#91;:foo {:id  :foo
-           :pre &#91;&#40;fn &#91;handler&#93;
-                   &#40;fn &#91;ctx {:keys &#91;baz&#93; :as inputs} outputs&#93;
-                     &#40;when &#40;&gt; baz 2&#41;
-                       &#40;handler ctx inputs outputs&#41;&#41;
-                     ;; returning nil prevents handler execution
-                     &#41;&#41;&#93;}&#93;&#93;}
-</code></pre><h3>Triggering Effects</h3><p>Effects can act as inputs to the data flow engine. For example, this might happen when a button is clicked and you want a value to increment. This can be accomplished with a call to <code>trigger-effects</code>.</p><p><code>trigger-effects</code> takes a list of effects that you would like trigger and calls <code>transact</code> with the current state of the data from all the inputs of the effects. For example:</p><pre><code class="clojure">&#40;def ctx
-     &#40;domino.core/initialize
-       {:model   &#91;&#91;:total {:id :total}&#93;&#93;
-        :effects &#91;{:id      :increment-total
-                   :outputs &#91;:total&#93;
-                   :handler &#40;fn &#91;&#95; current-state&#93;
-                              &#40;update current-state :total inc&#41;&#41;}&#93;}&#41;&#41;
+</code></pre><p>This schema declaration is a map containing three keys:</p><ul><li>The <code>:model</code> key declares the shape of the data model used by Domino.</li><li>The <code>:events</code> key contains pure functions that represent events that are triggered when their inputs change. The events produce updated values that are persisted in the state.</li><li>The <code>:effects</code> key contains the functions that produce side effects based on the updated state.</li></ul><p>Using a unified model referenced by the event functions allows us to easily tell how a particular piece of business logic is triggered. </p><p>The event engine generates a direct acyclic graph (DAG) based on the <code>:input</code> keys declared by each event that's used to compute the new state in a transaction. This approach removes any ambiguity regarding when and how business logic is executed.</p><p>Domino explicitly separates the code that modifies the state of the data from the code that causes side effects. This encourages keeping business logic pure and keeping the effects at the edges of the application.</p><p><strong>3. Initialize the engine</strong></p><p>The <code>schema</code> that we declared above provides a specification for the internal data model and the code that operates on it. Once we've created a schema, we will need to initialize the data flow engine. This is done by calling the <code>domino/initialize</code> function. This function can be called by providing a schema along with an optional initial state map. In our example, we will give it the <code>schema</code> that we defined above, and an initial value for the state with the <code>:total</code> set to <code>0</code>.</p><pre><code class="clojure lang-eval-clojure">&#40;def ctx &#40;atom &#40;domino/initialize schema {:total 0}&#41;&#41;&#41;
+</code></pre><p>Calling the <code>initialize</code> function creates a context <code>ctx</code> that's used as the initial state for the engine. The context will contain the model, events, effects, event graph, and db (state). In our example we use an atom in order to easily update the state of the engine.</p><p><strong>4. Transact your external data changes</strong></p><p>We can update the state of the data by calling <code>domino/transact</code> that accepts the current <code>ctx</code> along with an inputs vector, returning the updated <code>ctx</code>. The input vector is a collection of path-value pairs. For example, to set the value of <code>:amount</code> to <code>10</code>, you would pass in the following input vector <code>&#91;&#91;&#91;:amount&#93; 10&#93;&#93;</code>.</p><pre><code class="clojure lang-eval-clojure">&#40;swap! ctx domino/transact &#91;&#91;&#91;:amount&#93; 10&#93;&#93;&#41;
+</code></pre><p>The updated <code>ctx</code> contains the <code>:change-history</code> which is a simple vector of all the changes as they were applied to the data in exectution order of the events that were triggered.</p><pre><code class="clojure lang-eval-clojure">&#40;:change-history @ctx&#41;
+</code></pre><p>We can see the new context contains the updated total amount and the change history shows the order in which the changes were applied.</p><p>The <code>:domino.core/db</code> key in the context will contain the updated state reflecting the changes applied by running the events.</p><pre><code class="clojure lang-eval-clojure">&#40;:domino.core/db @ctx&#41;
+</code></pre><p>Finally, let's update the <code>:amount</code> to a value that triggers an effect.</p><pre><code class="clojure lang-eval-clojure">&#40;require '&#91;reagent.core :as reagent&#93;&#41;
 
-&#40;:domino.core/db &#40;domino.core/trigger-effects ctx &#91;:increment-total&#93;&#41;&#41; ;; =&gt; {:total 1}
+&#40;defn button &#91;&#93;
+  &#91;:button
+   {:on-click #&#40;swap! ctx domino/transact &#91;&#91;&#91;:amount&#93; 2000&#93;&#93;&#41;}
+   &quot;trigger effect&quot;&#93;&#41;
+
+&#40;reagent/render-component &#91;button&#93; js/klipse-container&#41;
+</code></pre><h3>Interceptors</h3><p>Domino provides the ability to add interceptors pre and post event execution. Interceptors are defined in the schema's model. If there are multiple interceptors applicable, they are composed together.</p><p>In the metadata map for a model key, you can add a <code>:pre</code> and <code>:post</code> key to define these interceptors. Returning a <code>nil</code> value from an interceptor will short circuit execution. For example, we could check if the context is authorized before running the events as follows:</p><pre><code class="clojure lang-eval-clojure">&#40;let &#91;ctx &#40;domino/initialize
+            {:model  &#91;&#91;:foo {:id   :foo
+                             :pre  &#91;&#40;fn &#91;handler&#93;
+                                      &#40;fn &#91;ctx inputs outputs&#93;
+                                        ;;only run the handler if ctx contains
+                                        ;; :authorized key
+                                        &#40;when &#40;:authorized ctx&#41;
+                                          &#40;handler ctx inputs outputs&#41;&#41;&#41;&#41;&#93;
+                             :post &#91;&#40;fn &#91;handler&#93;
+                                      &#40;fn &#91;result&#93;
+                                        &#40;handler &#40;update result :foo #&#40;or % -1&#41;&#41;&#41;&#41;&#41;&#93;}&#93;&#93;
+             :events &#91;{:inputs  &#91;:foo&#93;
+                       :outputs &#91;:foo&#93;
+                       :handler &#40;fn &#91;ctx {:keys &#91;foo&#93;} outputs&#93;
+                                  {:foo &#40;inc foo&#41;}&#41;}&#93;}&#41;&#93;
+  &#40;map :domino.core/db
+       &#91;&#40;domino/transact ctx &#91;&#91;&#91;:foo&#93; 0&#93;&#93;&#41;
+        &#40;domino/transact &#40;assoc ctx :authorized true&#41; &#91;&#91;&#91;:foo&#93; 0&#93;&#93;&#41;&#93;&#41;&#41;
+</code></pre><h3>Triggering Effects</h3><p>Effects can act as inputs to the data flow engine. For example, this might happen when a button is clicked and you want a value to increment. This can be accomplished with a call to <code>trigger-effects</code>.</p><p><code>trigger-effects</code> takes a list of effects that you would like trigger and calls <code>transact</code> with the current state of the data from all the inputs of the effects. For example:</p><pre><code class="clojure lang-eval-clojure">&#40;let &#91;ctx
+      &#40;domino.core/initialize
+        {:model   &#91;&#91;:total {:id :total}&#93;&#93;
+         :effects &#91;{:id      :increment-total
+                    :outputs &#91;:total&#93;
+                    :handler &#40;fn &#91;&#95; current-state&#93;
+                               &#40;update current-state :total inc&#41;&#41;}&#93;}
+        {:total 0}&#41;&#93;
+  
+&#40;:domino.core/db &#40;domino.core/trigger-effects ctx &#91;:increment-total&#93;&#41;&#41;&#41;
 </code></pre><p>This wraps up everything you need to know to start using Domino. You can see a more detailed example using Domino with re-frame <a href='https://domino-clj.github.io/demo'>here</a>.</p><h2>Possible Use Cases</h2><ul><li>UI state management</li><li>FSM</li><li>Reactive systems / spreadsheet-like models</li></ul><h2>Example App</h2><p>There is a demo front-end test page under <code>env/dev/cljs/domino/test&#95;page.cljs</code></p><h2>Inspirations</h2><ul><li><a href='https://github.com/Day8/re-frame'>re-frame</a></li><li><a href='https://github.com/hoplon/javelin'>javelin</a></li><li><a href='https://github.com/metosin/reitit'>reitit</a></li></ul><h2>License</h2><p>Copyright © 2019 </p><p>Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.</p>
 
     <script src="highlight.pack.js"></script>
