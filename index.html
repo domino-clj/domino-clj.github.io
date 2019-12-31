@@ -32,7 +32,9 @@
  :outputs &#91;:total&#93;
  :handler &#40;fn &#91;ctx {:keys &#91;amount&#93;} {:keys &#91;total&#93;}&#93;
             {:total &#40;+ total amount&#41;}&#41;}
-</code></pre><p>It's also possible to declare async events by providing the <code>:async?</code> key, e.g:</p><pre><code class="clojure">{:async?  true
+</code></pre><p>Domino also provides a <code>domino.core/event</code> helper for declaring events, so the above event can also be written as follows:</p><pre><code class="clojure">&#40;domino.core/event &#91;ctx {:keys &#91;amount&#93;} {:keys &#91;total&#93;}&#93;
+  {:total &#40;+ total amount&#41;}&#41;
+</code></pre><p>The macro requires that the <code>:keys</code> destructuring syntax is used for input and outputs, and expands the the event map with the <code>:inputs</code> and <code>:outputs</code> keys being inferred from the ones specified using the <code>:keys</code> in the event declaration.</p><p>It's also possible to declare async events by providing the <code>:async?</code> key, e.g:</p><pre><code class="clojure">{:async?  true
  :inputs  &#91;:amount&#93;
  :outputs &#91;:total&#93;
  :handler &#40;fn &#91;ctx {:keys &#91;amount&#93;} {:keys &#91;total&#93;} callback&#93;
