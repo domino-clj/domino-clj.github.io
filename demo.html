@@ -27,7 +27,9 @@
 </head>
 
 <body>
-    <h1>Example of Domino with re-frame</h1><p><pre><code class="language-clojure lang-eval-clojure" data-external-libs="https://raw.githubusercontent.com/domino-clj/domino/master/src,https://raw.githubusercontent.com/day8/re-frame/tree/master/src"> (require '[domino.core :as domino]) </code></pre></p><pre><code class="clojure lang-eval-clojure">&#40;require '&#91;reagent.core :as reagent&#93;&#41;
+    <h1>Example of Domino with re-frame</h1><p><pre><code class="language-clojure lang-eval-clojure" data-external-libs="https://raw.githubusercontent.com/domino-clj/domino/master/src,https://raw.githubusercontent.com/day8/re-frame/tree/master/src"> (require '[domino.core :as domino]) </code></pre></p><pre><code class="clojure lang-eval-clojure">
+&#40;require '&#91;reagent.core :as reagent&#93;&#41;
+&#40;require '&#91;reagent.dom :as reagent-dom&#93;&#41;
 &#40;require '&#91;re-frame.core :as rf&#93;&#41;
 &#40;require '&#91;goog.string :as string&#93;&#41;
 &#40;require '&#91;goog.string.format&#93;&#41;
@@ -143,7 +145,7 @@
    &#91;:h4 &quot;DB state&quot;&#93;
    &#91;:pre &#40;with-out-str &#40;pprint @&#40;rf/subscribe &#91;:db&#93;&#41;&#41;&#41;&#93;&#93;&#41;
 
-&#40;reagent/render-component &#91;home-page&#93; js/klipse-container&#41;
+&#40;reagent-dom/render &#91;home-page&#93; js/klipse-container&#41;
 </code></pre>
 
     <script src="highlight.pack.js"></script>
