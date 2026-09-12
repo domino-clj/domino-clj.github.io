@@ -32,7 +32,11 @@
  :outputs &#91;:total&#93;
  :handler &#40;fn &#91;ctx {:keys &#91;amount&#93;} {:keys &#91;total&#93;}&#93;
             {:total &#40;+ total amount&#41;}&#41;}
-</code></pre><p>Domino also provides a <code>domino.core/event</code> helper for declaring events, so the above event can also be written as follows:</p><pre><code class="clojure">&#40;domino.core/event &#91;ctx {:keys &#91;amount&#93;} {:keys &#91;total&#93;}&#93;
+</code></pre><p>Handlers may be called with partial input. Inputs that have no value in the db, or whose value is <code>nil</code>, are omitted from the input map rather than being passed as <code>nil</code>. This means destructuring defaults work as expected:</p><pre><code class="clojure">{:inputs  &#91;:amount :discount&#93;
+ :outputs &#91;:total&#93;
+ :handler &#40;fn &#91;ctx {:keys &#91;amount discount&#93; :or {discount 0}} {:keys &#91;total&#93;}&#93;
+            {:total &#40;- total amount discount&#41;}&#41;}
+</code></pre><p>In the above example <code>discount</code> is bound to <code>0</code> when it has not been populated yet. Handlers should not assume that all inputs are present, and events may also run more than once within a transaction as their outputs propagate to other events.</p><p>Domino also provides a <code>domino.core/event</code> helper for declaring events, so the above event can also be written as follows:</p><pre><code class="clojure">&#40;domino.core/event &#91;ctx {:keys &#91;amount&#93;} {:keys &#91;total&#93;}&#93;
   {:total &#40;+ total amount&#41;}&#41;
 </code></pre><p>The macro requires that the <code>:keys</code> destructuring syntax is used for input and outputs, and expands the the event map with the <code>:inputs</code> and <code>:outputs</code> keys being inferred from the ones specified using the <code>:keys</code> in the event declaration.</p><p>Event handlers can return derefable values for lazy or async computation. The engine automatically detects and derefs the result before applying it:</p><pre><code class="clojure">{:inputs  &#91;:amount&#93;
  :outputs &#91;:total&#93;
